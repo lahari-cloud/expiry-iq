@@ -1,0 +1,12 @@
+import express from 'express';
+import multer from 'multer';
+import path from 'path';
+import { create, list, remove, scan, update } from '../controllers/productController.js';
+import { protect } from '../middleware/auth.js';
+const r = express.Router();
+const storage = multer.diskStorage({ destination:'uploads/', filename:(_,f,cb)=>cb(null,`${Date.now()}${path.extname(f.originalname)}`) });
+const upload = multer({ storage });
+r.use(protect);
+r.get('/', list); r.post('/', create); r.put('/:id', update); r.delete('/:id', remove);
+r.post('/scan', upload.single('image'), scan);
+export default r;
