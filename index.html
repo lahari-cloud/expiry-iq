@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>ExpiryAlert v3</title>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://unpkg.com/tesseract.js@5/dist/tesseract.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080b12;--s1:#0e1420;--s2:#141c2e;--s3:#1a2338;
+  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.14);
+  --text:#e8eaf0;--muted:#7882a0;--faint:#323858;
+  --teal:#2dd4bf;--teal-d:rgba(45,212,191,0.12);
+  --amber:#f59e0b;--amber-d:rgba(245,158,11,0.14);
+  --rose:#f43f5e;--rose-d:rgba(244,63,94,0.14);
+  --green:#22c55e;--green-d:rgba(34,197,94,0.12);
+  --r:14px;--r2:20px;--shadow:0 8px 32px rgba(0,0,0,0.45);
+}
+[data-theme=light]{
+  --bg:#f1f5fb;--s1:#fff;--s2:#f4f7fd;--s3:#e8edf7;
+  --border:rgba(0,0,0,0.07);--border2:rgba(0,0,0,0.13);
+  --text:#0f172a;--muted:#64748b;--faint:#cbd5e1;
+  --teal:#0d9488;--teal-d:rgba(13,148,136,0.1);
+  --amber:#d97706;--amber-d:rgba(217,119,6,0.1);
+  --rose:#e11d48;--rose-d:rgba(225,29,72,0.1);
+  --shadow:0 8px 32px rgba(0,0,0,0.08);
+}
+html{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);scroll-behavior:smooth}
+body{min-height:100dvh}
+input,select,button,textarea{font-family:inherit}
+img{max-width:100%;display:block}
+
+/* NAV */
+.nav{
+  position:sticky;top:0;z-index:40;
+  background:rgba(8,11,18,0.88);backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);padding:0 20px;
+}
+[data-theme=light] .nav{background:rgba(241,245,251,0.92)}
+.nav-inner{max-width:1300px;margin:0 auto;display:flex;align-items:center;height:60px;gap:12px}
+.logo{display:flex;align-items:center;gap:9px;text-decoration:none;color:inherit}
+.logo-icon{width:32px;height:32px;background:var(--teal);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.logo-text{font-size:16px;font-weight:800;letter-spacing:-.4px}
+.logo-text span{color:var(--teal)}
+.nav-space{flex:1}
+.icon-btn{width:36px;height:36px;border:1px solid var(--border2);border-radius:9px;background:var(--s2);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s;font-size:15px}
+.icon-btn:hover{background:var(--s3)}
+
+/* PAGE */
+.page{max-width:1300px;margin:0 auto;padding:28px 20px}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:28px}
+.stat{background:var(--s1);border:1px solid var(--border);border-radius:var(--r2);padding:18px;position:relative;overflow:hidden;transition:transform .2s}
+.stat:hover{transform:translateY(-2px)}
+.stat::after{content:'';position:absolute;inset:0;pointer-events:none}
+.stat.teal::after{background:radial-gradient(circle at 90% 10%,var(--teal-d),transparent 65%)}
+.stat.amber::after{background:radial-gradient(circle at 90% 10%,var(--amber-d),transparent 65%)}
+.stat.rose::after{background:radial-gradient(circle at 90% 10%,var(--rose-d),transparent 65%)}
+.stat.green::after{background:radial-gradient(circle at 90% 10%,var(--green-d),transparent 65%)}
+.stat-ico{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:16px}
+.stat-ico.teal{background:var(--teal-d);color:var(--teal)}
+.stat-ico.amber{background:var(--amber-d);color:var(--amber)}
+.stat-ico.rose{background:var(--rose-d);color:var(--rose)}
+.stat-ico.green{background:var(--green-d);color:var(--green)}
+.stat-val{font-size:30px;font-weight:900;letter-spacing:-1px}
+.stat-lbl{margin-top:4px;font-size:12px;color:var(--muted)}
+
+/* ALERT PANEL */
+.alert-panel{background:var(--s1);border:1px solid var(--border);border-radius:var(--r2);padding:20px;margin-bottom:20px}
+.section-tag{font-size:11px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--teal);margin-bottom:4px}
+.section-head{font-size:18px;font-weight:800;letter-spacing:-.3px;margin-bottom:16px}
+.alert-list{display:flex;flex-direction:column;gap:10px}
+.alert-item{
+  display:flex;align-items:center;gap:12px;
+  padding:12px 14px;border-radius:var(--r);border:1px solid;
+}
+.alert-item.expired{background:var(--rose-d);border-color:rgba(244,63,94,.3);color:var(--rose)}
+.alert-item.expiring{background:var(--amber-d);border-color:rgba(245,158,11,.3);color:var(--amber)}
+.alert-icon{font-size:18px;flex-shrink:0}
+.alert-body{flex:1}
+.alert-title{font-weight:700;font-size:14px}
+.alert-sub{font-size:12px;opacity:.75;margin-top:2px}
+.alert-badge{
+  font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;
+  background:rgba(255,255,255,.12);flex-shrink:0;
+}
+.no-alerts{display:flex;align-items:center;gap:10px;padding:16px;font-size:13px;color:var(--muted);background:var(--s2);border-radius:var(--r)}
+
+/* MAIN GRID */
+.grid2{display:grid;gap:18px;grid-template-columns:400px 1fr}
+@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+
+/* PANEL */
+.panel{background:var(--s1);border:1px solid var(--border);border-radius:var(--r2);padding:22px}
+
+/* FORM */
+.fg{margin-bottom:12px}
+.fl{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;letter-spacing:.04em;text-transform:uppercase}
+.inp{
+  width:100%;padding:11px 13px;border-radius:var(--r);
+  border:1px solid var(--border2);background:var(--s2);
+  color:var(--text);font-size:13px;outline:none;transition:border-color .18s,box-shadow .18s;
+}
+.inp:focus{border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-d)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.upload-zone{border:2px dashed var(--border2);border-radius:var(--r);padding:20px;text-align:center;cursor:pointer;background:var(--s2);transition:all .2s}
+.upload-zone:hover{border-color:var(--teal);background:var(--teal-d)}
+.upload-zone p{font-size:12px;color:var(--muted);margin-top:6px}
+.upload-zone b{font-size:13px}
+.prev{width:100%;height:160px;object-fit:cover;border-radius:var(--r);margin-top:10px;border:1px solid var(--border)}
+.ocr-msg{display:flex;align-items:center;gap:8px;padding:10px 13px;border-radius:var(--r);font-size:12px;margin-top:8px}
+.ocr-msg.ok{background:var(--teal-d);border:1px solid rgba(45,212,191,.25);color:var(--teal)}
+.ocr-msg.warn{background:var(--amber-d);border:1px solid rgba(245,158,11,.25);color:var(--amber)}
+.ocr-msg.err{background:var(--rose-d);border:1px solid rgba(244,63,94,.25);color:var(--rose)}
+.ocr-msg.load{background:var(--s2);border:1px solid var(--border);color:var(--muted)}
+.spin{animation:spin 1s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* BUTTONS */
+.btn{width:100%;padding:12px;border-radius:var(--r);border:none;font-size:13px;font-weight:700;cursor:pointer;transition:all .18s;display:flex;align-items:center;justify-content:center;gap:7px}
+.btn-p{background:var(--teal);color:#080b12}
+.btn-p:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.btn-s{background:var(--s3);color:var(--text);border:1px solid var(--border2);margin-bottom:8px}
+.btn-s:hover{background:var(--s2)}
+.cam-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+
+/* FILTERS */
+.filter-bar{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px}
+.flt{padding:5px 13px;border-radius:99px;font-size:12px;font-weight:600;border:1px solid var(--border2);background:var(--s2);color:var(--muted);cursor:pointer;transition:all .15s}
+.flt.on{background:var(--teal);color:#080b12;border-color:transparent}
+.flt:hover:not(.on){background:var(--s3);color:var(--text)}
+.search-wrap{position:relative;margin-bottom:12px}
+.search-ico{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;pointer-events:none}
+
+/* PRODUCT CARDS */
+.prod-list{display:flex;flex-direction:column;gap:10px}
+.prod-card{
+  display:flex;gap:12px;align-items:flex-start;
+  background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:14px;
+  transition:border-color .18s,transform .18s;
+  animation:fadeUp .3s ease both;
+}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.prod-card:hover{transform:translateY(-2px);border-color:var(--border2)}
+.prod-card.expired{border-color:rgba(244,63,94,.3)}
+.prod-card.expiring{border-color:rgba(245,158,11,.3)}
+.prod-card.safe{border-color:rgba(34,197,94,.1)}
+.prod-thumb{width:58px;height:58px;border-radius:10px;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;overflow:hidden}
+.prod-thumb img{width:58px;height:58px;object-fit:cover}
+.prod-body{flex:1;min-width:0}
+.prod-name{font-size:14px;font-weight:700;margin-bottom:2px}
+.prod-meta{font-size:11px;color:var(--muted);text-transform:capitalize;margin-bottom:8px}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:99px;font-size:10px;font-weight:700}
+.badge.safe{background:var(--green-d);color:var(--green)}
+.badge.expiring{background:var(--amber-d);color:var(--amber)}
+.badge.expired{background:var(--rose-d);color:var(--rose)}
+.badge.today{background:var(--rose-d);color:var(--rose)}
+.prod-actions{display:flex;gap:6px;margin-top:8px}
+.act-btn{padding:4px 10px;border-radius:7px;border:1px solid var(--border2);background:var(--s1);font-size:11px;font-weight:600;cursor:pointer;color:var(--muted);transition:all .15s}
+.act-btn:hover{background:var(--s3);color:var(--text)}
+.act-btn.del:hover{background:var(--rose-d);color:var(--rose);border-color:transparent}
+
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px;animation:fadeI .18s ease;backdrop-filter:blur(6px)}
+@keyframes fadeI{from{opacity:0}to{opacity:1}}
+.modal{background:var(--s1);border:1px solid var(--border2);border-radius:var(--r2);padding:24px;width:100%;max-width:430px;animation:scaleI .2s ease}
+@keyframes scaleI{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+.modal-hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px}
+.modal-title{font-size:18px;font-weight:800;letter-spacing:-.3px}
+.x-btn{width:30px;height:30px;border-radius:7px;border:1px solid var(--border2);background:var(--s2);color:var(--muted);cursor:pointer;font-size:17px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.x-btn:hover{background:var(--s3);color:var(--text)}
+.m-actions{display:flex;gap:10px;margin-top:18px}
+.m-actions .btn{flex:1}
+.btn-out{background:transparent;border:1px solid var(--border2);color:var(--text)}
+.btn-out:hover{background:var(--s2)}
+
+/* TOASTS */
+.toast-wrap{position:fixed;bottom:22px;right:22px;z-index:200;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{
+  background:var(--s2);border:1px solid var(--border2);border-radius:var(--r);
+  padding:12px 16px;font-size:13px;box-shadow:var(--shadow);
+  display:flex;align-items:center;gap:10px;min-width:260px;max-width:320px;
+  animation:toastIn .3s ease both;pointer-events:all;
+}
+@keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.toast.success{border-left:3px solid var(--teal)}
+.toast.warn{border-left:3px solid var(--amber)}
+.toast.error{border-left:3px solid var(--rose)}
+.toast-icon{font-size:16px;flex-shrink:0}
+.toast-body{flex:1}
+.toast-title{font-weight:700;font-size:13px}
+.toast-sub{font-size:11px;color:var(--muted);margin-top:1px}
+.toast-close{font-size:16px;color:var(--muted);cursor:pointer;transition:color .15s;flex-shrink:0}
+.toast-close:hover{color:var(--text)}
+
+/* EMPTY */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 20px;text-align:center;color:var(--muted);min-height:260px}
+.empty-ico{font-size:42px;opacity:.35;margin-bottom:12px}
+.empty h3{font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px}
+.empty p{font-size:12px;max-width:240px}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-thumb{background:var(--s3);border-radius:3px}
+
+input[type=date]::-webkit-calendar-picker-indicator{filter:invert(0.5);cursor:pointer}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useMemo, useCallback } = React;
+
+// ── helpers ───────────────────────────────────────────────────────────────
+const uid = () => Math.random().toString(36).slice(2,10);
+const daysUntil = (d) => { const t=new Date();t.setHours(0,0,0,0);const e=new Date(d);e.setHours(0,0,0,0);return Math.ceil((e-t)/86400000); };
+const fmtDate = (d) => new Date(d).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'});
+const today = () => new Date().toISOString().split('T')[0];
+
+const SEED = [
+  { id:uid(), name:'Almond Milk',        category:'food',          expiryDate: (() => { const d=new Date();d.setDate(d.getDate()-1);return d.toISOString().split('T')[0]; })(), img:'' },
+  { id:uid(), name:'Paracetamol 500mg',  category:'medicine',      expiryDate: (() => { const d=new Date();d.setDate(d.getDate()+3);return d.toISOString().split('T')[0]; })(), img:'' },
+  { id:uid(), name:'Sunscreen SPF 50',   category:'personal-care', expiryDate: (() => { const d=new Date();d.setDate(d.getDate()+6);return d.toISOString().split('T')[0]; })(), img:'' },
+  { id:uid(), name:'Greek Yogurt',       category:'food',          expiryDate: (() => { const d=new Date();d.setDate(d.getDate()+0);return d.toISOString().split('T')[0]; })(), img:'' },
+  { id:uid(), name:'Hand Sanitizer',     category:'personal-care', expiryDate: (() => { const d=new Date();d.setFullYear(d.getFullYear()+1);return d.toISOString().split('T')[0]; })(), img:'' },
+];
+
+// OCR helpers
+const OCR_PATS = [
+  /(exp(?:iry|ires)?|best before|use by|bb)[^\d]*(\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4})/i,
+  /(\d{4}[\/\-.]\d{1,2}[\/\-.]\d{1,2})/,
+  /(\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4})/,
+  /(\d{1,2}[ \-][A-Za-z]{3,9}[ \-]\d{2,4})/,
+];
+const MONTHS = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+const parseD = (s) => {
+  if (!s) return null; s=s.trim();
+  if (/^\d{4}[-\/]\d{1,2}[-\/]\d{1,2}$/.test(s)){const[y,m,d]=s.split(/[-\/]/);return new Date(+y,+m-1,+d);}
+  if (/^\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4}$/.test(s)){const[a,b,c]=s.split(/[-\/]/);return new Date(+c<100?2000+ +c:+c,+b-1,+a);}
+  if (/^\d{1,2}[ \-][a-z]{3,9}[ \-]\d{2,4}$/i.test(s)){const[d,m,y]=s.split(/[ \-]/);const mo=MONTHS[m.slice(0,3).toLowerCase()];if(mo!==undefined)return new Date(+y<100?2000+ +y:+y,mo,+d);}
+  return null;
+};
+const extractOCR = (text) => { for(const p of OCR_PATS){const m=text.match(p);if(m){const c=(m[2]||m[1]).trim();const d=parseD(c);if(d&&d.getFullYear()>2000)return{candidate:c,date:d.toISOString().split('T')[0]};}} return null; };
+
+// ── Toast system ──────────────────────────────────────────────────────────
+let _addToast = () => {};
+const showToast = (title, sub='', type='success') => _addToast({ id:uid(), title, sub, type });
+
+function Toasts() {
+  const [list, setList] = useState([]);
+  useEffect(() => { _addToast = (t) => setList(l => [...l.slice(-4), t]); }, []);
+  const remove = (id) => setList(l => l.filter(t => t.id !== id));
+  useEffect(() => {
+    if (!list.length) return;
+    const t = setTimeout(() => setList(l => l.slice(1)), 4000);
+    return () => clearTimeout(t);
+  }, [list]);
+  const icons = { success:'✓', warn:'⚠', error:'✕', info:'🔔' };
+  return (
+    <div className="toast-wrap">
+      {list.map(t => (
+        <div key={t.id} className={`toast ${t.type}`}>
+          <span className="toast-icon">{icons[t.type]||'🔔'}</span>
+          <div className="toast-body">
+            <div className="toast-title">{t.title}</div>
+            {t.sub && <div className="toast-sub">{t.sub}</div>}
+          </div>
+          <span className="toast-close" onClick={() => remove(t.id)}>×</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Alert Panel ───────────────────────────────────────────────────────────
+function AlertPanel({ products }) {
+  const expired  = products.filter(p => daysUntil(p.expiryDate) < 0).sort((a,b) => new Date(a.expiryDate)-new Date(b.expiryDate));
+  const expiring = products.filter(p => { const d=daysUntil(p.expiryDate); return d>=0&&d<=7; }).sort((a,b)=>daysUntil(a.expiryDate)-daysUntil(b.expiryDate));
+  const alerts = [
+    ...expired.map(p => ({ ...p, kind:'expired', days: daysUntil(p.expiryDate) })),
+    ...expiring.map(p => ({ ...p, kind:'expiring', days: daysUntil(p.expiryDate) })),
+  ];
+  const catEmoji = { food:'🥩',medicine:'💊','personal-care':'🧴',other:'📦' };
+
+  return (
+    <div className="alert-panel">
+      <div className="section-tag">⚠️ Expiry Alerts</div>
+      <div className="section-head">Items needing attention</div>
+      <div className="alert-list">
+        {alerts.length === 0
+          ? <div className="no-alerts">✅ All products are safe — no alerts right now.</div>
+          : alerts.map(p => (
+            <div key={p.id} className={`alert-item ${p.kind}`}>
+              <span className="alert-icon">{catEmoji[p.category]||'📦'}</span>
+              <div className="alert-body">
+                <div className="alert-title">{p.name}</div>
+                <div className="alert-sub">
+                  {p.kind==='expired'
+                    ? `Expired ${Math.abs(p.days)} day${Math.abs(p.days)!==1?'s':''} ago — ${fmtDate(p.expiryDate)}`
+                    : p.days===0 ? `Expires TODAY — ${fmtDate(p.expiryDate)}`
+                    : `Expires in ${p.days} day${p.days!==1?'s':''} — ${fmtDate(p.expiryDate)}`}
+                </div>
+              </div>
+              <span className="alert-badge">
+                {p.kind==='expired' ? '🔴 Expired' : p.days===0 ? '🔴 Today' : '🟡 Soon'}
+              </span>
+            </div>
+          ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Stat Card ─────────────────────────────────────────────────────────────
+function Stat({ label, value, tone, ico }) {
+  return (
+    <div className={`stat ${tone}`}>
+      <div className={`stat-ico ${tone}`}>{ico}</div>
+      <div className="stat-val">{value}</div>
+      <div className="stat-lbl">{label}</div>
+    </div>
+  );
+}
+
+// ── Product Card ──────────────────────────────────────────────────────────
+function ProdCard({ p, onDel, onEdit }) {
+  const days = daysUntil(p.expiryDate);
+  const status = days<0?'expired':days<=7?'expiring':'safe';
+  const bdg = days<0?{l:`Expired ${Math.abs(days)}d ago`,c:'expired'}:days===0?{l:'Today!',c:'today'}:days<=7?{l:`${days}d left`,c:'expiring'}:{l:`${days}d left`,c:'safe'};
+  const emo = { food:'🥩',medicine:'💊','personal-care':'🧴',other:'📦' };
+  return (
+    <div className={`prod-card ${status}`}>
+      <div className="prod-thumb">{p.img ? <img src={p.img} alt="" /> : emo[p.category]}</div>
+      <div className="prod-body">
+        <div style={{display:'flex',alignItems:'center',gap:'8px',flexWrap:'wrap'}}>
+          <span className="prod-name">{p.name}</span>
+          <span className={`badge ${bdg.c}`}>{bdg.l}</span>
+        </div>
+        <div className="prod-meta">{p.category} · {fmtDate(p.expiryDate)}</div>
+        <div className="prod-actions">
+          <button className="act-btn" onClick={()=>onEdit(p)}>✏ Edit</button>
+          <button className="act-btn del" onClick={()=>onDel(p.id)}>🗑 Delete</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Edit Modal ─────────────────────────────────────────────────────────────
+function EditModal({ p, onSave, onClose }) {
+  const [form, setForm] = useState({...p});
+  const f = k => e => setForm(prev=>({...prev,[k]:e.target.value}));
+  const save = () => { if (!form.name||!form.expiryDate){showToast('Fill all fields','','error');return;} onSave(form); showToast('Product updated','','success'); onClose(); };
+  return (
+    <div className="modal-bg" onClick={e=>e.target.className==='modal-bg'&&onClose()}>
+      <div className="modal">
+        <div className="modal-hd">
+          <div>
+            <div className="section-tag">Edit product</div>
+            <div className="modal-title">{p.name}</div>
+          </div>
+          <button className="x-btn" onClick={onClose}>×</button>
+        </div>
+        <div className="fg"><label className="fl">Product name</label><input className="inp" value={form.name} onChange={f('name')}/></div>
+        <div className="row2">
+          <div className="fg">
+            <label className="fl">Category</label>
+            <select className="inp" value={form.category} onChange={f('category')}>
+              <option value="food">Food</option><option value="medicine">Medicine</option>
+              <option value="personal-care">Personal care</option><option value="other">Other</option>
+            </select>
+          </div>
+          <div className="fg"><label className="fl">Expiry date</label><input className="inp" type="date" value={form.expiryDate} onChange={f('expiryDate')}/></div>
+        </div>
+        <div className="m-actions">
+          <button className="btn btn-out" onClick={onClose}>Cancel</button>
+          <button className="btn btn-p" onClick={save}>Save changes</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Add Form ──────────────────────────────────────────────────────────────
+function AddForm({ onAdd }) {
+  const [form, setForm] = useState({name:'',category:'food',expiryDate:''});
+  const [preview, setPreview] = useState('');
+  const [ocrState, setOcrState] = useState(null);
+  const fileRef = useRef(); const camRef = useRef();
+
+  const runOCR = useCallback(async (file) => {
+    setOcrState('loading'); setPreview(URL.createObjectURL(file));
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const { data: { text } } = await Tesseract.recognize(e.target.result, 'eng', { logger:()=>{} });
+        const found = extractOCR(text);
+        if (found) {
+          setForm(f=>({...f,expiryDate:found.date}));
+          setOcrState({ok:true,msg:`✓ Detected: ${found.candidate}`});
+          showToast('Expiry date auto-detected!','OCR ran successfully','success');
+        } else {
+          setOcrState({ok:false,msg:'⚠ No date found — enter manually'});
+          showToast('OCR ran, date not found','Enter expiry date manually','warn');
+        }
+      } catch { setOcrState({ok:false,msg:'✕ OCR failed — enter manually'}); showToast('OCR failed','Enter date manually','error'); }
+    };
+    reader.readAsDataURL(file);
+  }, []);
+
+  const submit = () => {
+    if (!form.name.trim()) { showToast('Enter product name','','error'); return; }
+    if (!form.expiryDate) { showToast('Enter expiry date','','error'); return; }
+    onAdd({ id:uid(), ...form, img:preview });
+    setForm({name:'',category:'food',expiryDate:''}); setPreview(''); setOcrState(null);
+    showToast('Product added!','','success');
+  };
+
+  const f = k => e => setForm(prev=>({...prev,[k]:e.target.value}));
+
+  return (
+    <div className="panel">
+      <div className="section-tag">Add product</div>
+      <div className="section-head" style={{marginBottom:'16px'}}>Scan or enter manually</div>
+
+      <div className="cam-row">
+        <button className="btn btn-s" onClick={()=>fileRef.current.click()}>📁 Upload image</button>
+        <button className="btn btn-s" onClick={()=>camRef.current.click()}>📷 Camera</button>
+        <input ref={fileRef} type="file" accept="image/*" className="hidden" style={{display:'none'}} onChange={e=>e.target.files[0]&&runOCR(e.target.files[0])}/>
+        <input ref={camRef} type="file" accept="image/*" capture="environment" style={{display:'none'}} onChange={e=>e.target.files[0]&&runOCR(e.target.files[0])}/>
+      </div>
+
+      {preview && <img src={preview} className="prev" alt="preview"/>}
+      {ocrState==='loading' && <div className="ocr-msg load"><span className="spin">⌛</span> Running OCR…</div>}
+      {ocrState&&ocrState!=='loading' && <div className={`ocr-msg ${ocrState.ok?'ok':'warn'}`}>{ocrState.msg}</div>}
+
+      <div className="fg" style={{marginTop:'12px'}}>
+        <label className="fl">Product name</label>
+        <input className="inp" placeholder="e.g. Almond Milk" value={form.name} onChange={f('name')}/>
+      </div>
+      <div className="row2">
+        <div className="fg">
+          <label className="fl">Category</label>
+          <select className="inp" value={form.category} onChange={f('category')}>
+            <option value="food">Food</option><option value="medicine">Medicine</option>
+            <option value="personal-care">Personal care</option><option value="other">Other</option>
+          </select>
+        </div>
+        <div className="fg">
+          <label className="fl">Expiry date</label>
+          <input className="inp" type="date" value={form.expiryDate} onChange={f('expiryDate')}/>
+        </div>
+      </div>
+      <button className="btn btn-p" onClick={submit}>＋ Add product</button>
+    </div>
+  );
+}
+
+// ── App ────────────────────────────────────────────────────────────────────
+function App() {
+  const [products, setProducts] = useState(SEED);
+  const [filter, setFilter] = useState('all');
+  const [search, setSearch] = useState('');
+  const [editTarget, setEditTarget] = useState(null);
+  const [dark, setDark] = useState(true);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  }, [dark]);
+
+  // On load: fire toasts for expiring/expired items
+  useEffect(() => {
+    const urgent = products.filter(p => { const d=daysUntil(p.expiryDate); return d>=0&&d<=3; });
+    const expired = products.filter(p => daysUntil(p.expiryDate) < 0);
+    setTimeout(() => {
+      expired.slice(0,2).forEach(p => showToast(`${p.name} has expired!`, fmtDate(p.expiryDate), 'error'));
+      urgent.slice(0,3).forEach(p => {
+        const d = daysUntil(p.expiryDate);
+        showToast(
+          d===0 ? `${p.name} expires TODAY!` : `${p.name} expires in ${d} day${d>1?'s':''}!`,
+          fmtDate(p.expiryDate),
+          d===0 ? 'error' : 'warn'
+        );
+      });
+    }, 800);
+  }, []);
+
+  const stats = useMemo(() => ({
+    total: products.length,
+    expired: products.filter(p=>daysUntil(p.expiryDate)<0).length,
+    expiring: products.filter(p=>{const d=daysUntil(p.expiryDate);return d>=0&&d<=7;}).length,
+    safe: products.filter(p=>daysUntil(p.expiryDate)>7).length,
+  }), [products]);
+
+  const filtered = useMemo(() => {
+    return products
+      .filter(p => {
+        if (filter==='expired') return daysUntil(p.expiryDate)<0;
+        if (filter==='expiring'){const d=daysUntil(p.expiryDate);return d>=0&&d<=7;}
+        if (filter==='safe') return daysUntil(p.expiryDate)>7;
+        return true;
+      })
+      .filter(p => p.name.toLowerCase().includes(search.toLowerCase()) || p.category.toLowerCase().includes(search.toLowerCase()))
+      .sort((a,b) => new Date(a.expiryDate)-new Date(b.expiryDate));
+  }, [products, filter, search]);
+
+  const addProduct = p => setProducts(prev=>[...prev,p]);
+  const deleteProduct = id => { setProducts(prev=>prev.filter(p=>p.id!==id)); showToast('Product removed','','warn'); };
+  const saveEdit = updated => setProducts(prev=>prev.map(p=>p.id===updated.id?updated:p));
+
+  return (
+    <div style={{minHeight:'100dvh'}}>
+      {/* NAV */}
+      <nav className="nav">
+        <div className="nav-inner">
+          <a className="logo" href="#">
+            <div className="logo-icon">⏰</div>
+            <span className="logo-text">Expiry<span>Alert</span></span>
+          </a>
+          <div className="nav-space"/>
+          <button className="icon-btn" onClick={()=>setDark(d=>!d)} title="Toggle theme">
+            {dark?'☀':'🌙'}
+          </button>
+        </div>
+      </nav>
+
+      {/* PAGE */}
+      <main className="page">
+        {/* STATS */}
+        <div className="stats">
+          <Stat label="Total items"    value={stats.total}    tone="teal"  ico="📦"/>
+          <Stat label="Expiring soon"  value={stats.expiring} tone="amber" ico="⚠️"/>
+          <Stat label="Expired"        value={stats.expired}  tone="rose"  ico="🔴"/>
+          <Stat label="Safe items"     value={stats.safe}     tone="green" ico="✅"/>
+        </div>
+
+        {/* ⚠️ ALERT PANEL — main feature */}
+        <AlertPanel products={products}/>
+
+        {/* MAIN GRID */}
+        <div className="grid2">
+          <AddForm onAdd={addProduct}/>
+
+          <div className="panel">
+            <div className="section-tag">Products</div>
+            <div className="section-head" style={{marginBottom:'12px'}}>All tracked items</div>
+
+            <div className="search-wrap">
+              <span className="search-ico">🔍</span>
+              <input className="inp" placeholder="Search products…" value={search} onChange={e=>setSearch(e.target.value)} style={{paddingLeft:'32px'}}/>
+            </div>
+
+            <div className="filter-bar">
+              {[['all',`All (${stats.total})`],['expiring',`⚠ Expiring (${stats.expiring})`],['expired',`🔴 Expired (${stats.expired})`],['safe',`✅ Safe (${stats.safe})`]].map(([v,l])=>(
+                <button key={v} className={`flt${filter===v?' on':''}`} onClick={()=>setFilter(v)}>{l}</button>
+              ))}
+            </div>
+
+            <div className="prod-list">
+              {filtered.length===0
+                ? <div className="empty"><div className="empty-ico">📦</div><h3>No products found</h3><p>Add a product or change the filter.</p></div>
+                : filtered.map(p=><ProdCard key={p.id} p={p} onDel={deleteProduct} onEdit={setEditTarget}/>)}
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {editTarget && <EditModal p={editTarget} onSave={saveEdit} onClose={()=>setEditTarget(null)}/>}
+      <Toasts/>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
